@@ -1,0 +1,29 @@
+{
+  "name": "slack-gif-integration",
+  "version": "0.0.0",
+  "description": "A backend to serve gifs to a slack slash command",
+  "main": "server.js",
+  "dependencies": {
+    "body-parser": "*",
+    "express": "^4.13.3",
+    "multer": "1.0.5",
+    "request": "*",
+    "slack-client": "^1.4.1",
+    "forever": "*"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "say 'fuck yo tests'",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tkaruzis/slack-gif-integration.git"
+  },
+  "author": "Tyler Karuzis",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tkaruzis/slack-gif-integration/issues"
+  },
+  "homepage": "https://github.com/tkaruzis/slack-gif-integration"
+}
