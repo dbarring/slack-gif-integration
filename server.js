@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.post('/', function (req, res) {
-  search = req.body['text'];
+  var search = req.body['text'];
 
   if(req.body['token'] != secrets.SLACK_TOKEN) {
     res.send('ERROR: Slack Auth Token did not match');
