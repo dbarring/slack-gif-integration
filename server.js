@@ -24,7 +24,7 @@ app.post('/', function (req, res) {
   } else if(secrets.GOOGLE_CSE_KEY == '') {
     res.send('ERROR: Missing Google CSE Key');
   } else {
-    q = {
+    var q = {
       q: search,
       searchType: 'image',
       safe: 'high',
@@ -36,7 +36,7 @@ app.post('/', function (req, res) {
       key: secrets.GOOGLE_CSE_KEY
     }
 
-    url = 'https://www.googleapis.com/customsearch/v1';
+    var url = 'https://www.googleapis.com/customsearch/v1';
 
     var first = true;
     for(var k in q) {
@@ -49,17 +49,17 @@ app.post('/', function (req, res) {
         res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
         // TODO: Log the error
       } else {
-        body = JSON.parse(body);
+        var body = JSON.parse(body);
 
         if(body.error) {
           res.send("ERROR: " + body.error.errors[0].message);
           // TODO: Log the error
-        } else {
-          results = body.items;
+        } else if(body.items){
+          var results = body.items;
 
-          image = results[Math.floor(Math.random()*results.length)].link;
+          var image = results[Math.floor(Math.random()*results.length)].link;
 
-          response = {
+          var response = {
             response_type: "in_channel",
             attachments: [
               { fallback: search,
@@ -70,6 +70,8 @@ app.post('/', function (req, res) {
           };
 
           res.json(response);
+        } else {
+          res.send("ERROR: No results found");
         }
       }
     });
