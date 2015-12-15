@@ -4,6 +4,7 @@ var express = require('express'),
     multer = require('multer'),
     request = require('request'),
     fs = require('fs'),
+    history = {},
     secrets = {};
 try {
   secrets = JSON.parse(fs.readFileSync('secrets.json', 'utf8'));
@@ -16,6 +17,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.post('/', function (req, res) {
   var search = req.body['text'];
+  var current_history = {};
 
   if(req.body['token'] != secrets.SLACK_TOKEN) {
     res.send('ERROR: Slack Auth Token did not match');
@@ -57,6 +59,8 @@ app.post('/', function (req, res) {
         } else if(body.items){
           var results = body.items;
 
+          current_history.images = results;
+
           var image = results[Math.floor(Math.random()*results.length)].link;
 
           var response = {
@@ -70,11 +74,32 @@ app.post('/', function (req, res) {
           };
 
           res.json(response);
+          history[req.body['user_id']] = current_history;
         } else {
           res.send("ERROR: No results found");
         }
       }
     });
+  }
+});
+
+app.post('/rtd', function(req, res){
+  var user_id = req.body['user_id'];
+  if (history[user_id]) {
+    var image = history[user_id].images[Math.floor(Math.random()*results.length)].link;
+    var response = {
+      response_type: "in_channel",
+      attachments: [
+        { fallback: search,
+          image_url: image,
+          title: '<' + image + '|' + search + '>'
+        }
+      ]
+    };
+
+    res.json(response);
+  } else {
+    res.send("ERROR: No previous search found");
   }
 });
 
