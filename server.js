@@ -60,6 +60,7 @@ app.post('/', function (req, res) {
           var results = body.items;
 
           current_history.images = results;
+          current_history.search = search;
 
           var image = results[Math.floor(Math.random()*results.length)].link;
 
@@ -84,15 +85,16 @@ app.post('/', function (req, res) {
 });
 
 app.post('/rtd', function(req, res){
-  var user_id = req.body['user_id'];
-  if (history[user_id]) {
-    var image = history[user_id].images[Math.floor(Math.random()*history[user_id].images.length)].link;
+  var results = history[req.body['user_id']];
+
+  if (results) {
+    var image = results.images[Math.floor(Math.random()*results.images.length)].link;
     var response = {
       response_type: "in_channel",
       attachments: [
-        { fallback: search,
+        { fallback: results.search,
           image_url: image,
-          title: '<' + image + '|' + search + '>'
+          title: '<' + image + '|' + results.search + '>'
         }
       ]
     };
