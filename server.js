@@ -86,7 +86,7 @@ app.post('/', function (req, res) {
 app.post('/rtd', function(req, res){
   var user_id = req.body['user_id'];
   if (history[user_id]) {
-    var image = history[user_id].images[Math.floor(Math.random()*results.length)].link;
+    var image = history[user_id].images[Math.floor(Math.random()*history[user_id].images.length)].link;
     var response = {
       response_type: "in_channel",
       attachments: [
