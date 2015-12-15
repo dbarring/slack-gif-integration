@@ -28,3 +28,6 @@ node_modules
 
 # Config file
 secrets.json
+
+# Temporary auth store
+tokens.json
