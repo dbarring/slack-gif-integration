@@ -64,11 +64,10 @@ app.post('/', function (req, res) {
           // TODO: Log the error
         } else if(body.items){
           var results = body.items;
+          var image = results.splice(Math.floor(Math.random()*results.length),1)[0].link;
 
           current_history.images = results;
           current_history.search = search;
-
-          var image = results[Math.floor(Math.random()*results.length)].link;
 
           var user_token = tokens[req.body.user_id]
 
@@ -94,10 +93,12 @@ app.post('/', function (req, res) {
               } else {
                 var body = JSON.parse(body);
 
+                current_history.ts = body.message.ts;
+                current_history.channel = body.channel;
+
                 if(body.error) {
-                  post_text_to_url("ERROR: " + body.error.errors[0].message, req.body.response_url);
+                  post_text_to_url("ERROR: " + body.error, req.body.response_url);
                 } else {
-                  post_text_to_url('', req.body.response_url);
                   history[req.body['user_id']] = current_history;
                 }
               }
@@ -115,7 +116,7 @@ app.post('/', function (req, res) {
 
             res.json(response);
             history[req.body['user_id']] = current_history;
-            post_text_to_url('<https://slack.com/oauth/authorize?scope=chat:write:user,commands&team=' + req.body.team_id + '&state=' + req.body.user_id + '&client_id=' + secrets.APP_CLIENT_ID + '|Please authenticate to allow inline responses. Click here to auth.>', req.body.response_url);
+            post_text_to_url('<https://slack.com/oauth/authorize?scope=chat:write:user,commands&redirect_uri=' + secrets.HOST_URL + '&team=' + req.body.team_id + '&state=' + req.body.user_id + '&client_id=' + secrets.APP_CLIENT_ID + '|Please authenticate to allow inline responses. Click here to auth.>', req.body.response_url);
           }
         } else {
           res.send("ERROR: No results found");
@@ -153,50 +154,55 @@ app.post('/rtd', function(req, res){
   var results = history[req.body.user_id];
 
   if (results) {
-    var user_token = tokens[req.body.user_id]
-    var image = results.images[Math.floor(Math.random()*results.images.length)].link;
+    if (results.images.length == 0) {
+      res.send("ERROR: No more unseen images.");
+    } else {
+      var user_token = tokens[req.body.user_id]
+      var image = results.images.splice(Math.floor(Math.random()*results.images.length),1)[0].link;
 
-    if(user_token) {
-      res.send('');
-      var payload = {
-        token: user_token,
-        channel: req.body.channel_id,
-        text: "/gif " + results.search,
-        as_user: true,
-        attachments: JSON.stringify([
-          { fallback: results.search,
-            image_url: image,
-            title: '<' + image + '|' + results.search + '>'
-          }
-        ])
-      }
-
-      request.post('https://slack.com/api/chat.postMessage', {form: payload}, function(error, response, body) {
-        if(error) {
-          post_text_to_url("ERROR: Unexpected error ¯\\_(ツ)_/¯", req.body.response_url);
-          // TODO: Log the error
-        } else {
-          var body = JSON.parse(body);
-
-          if(body.error) {
-            post_text_to_url("ERROR: " + body.error.errors[0].message, req.body.response_url);
-          } else {
-            post_text_to_url('', req.body.response_url);
-          }
+      if(user_token) {
+        res.send('');
+        var payload = {
+          token: user_token,
+          ts: results.ts,
+          channel: results.channel,
+          text: "/gif " + results.search,
+          as_user: true,
+          attachments: JSON.stringify([
+            { fallback: results.search,
+              image_url: image,
+              title: '<' + image + '|' + results.search + '>'
+            }
+          ])
         }
-      })
-    } else { // User not authed
-      var response = {
-        response_type: "in_channel",
-        attachments: [
-          { fallback: results.search,
-            image_url: image,
-            title: '<' + image + '|' + results.search + '>'
-          }
-        ]
-      };
 
-      res.json(response);
+        request.post('https://slack.com/api/chat.update', {form: payload}, function(error, response, body) {
+          if(error) {
+            post_text_to_url("ERROR: Unexpected error ¯\\_(ツ)_/¯", req.body.response_url);
+            // TODO: Log the error
+          } else {
+            var body = JSON.parse(body);
+
+            if(body.error) {
+              post_text_to_url("ERROR: " + body.error, req.body.response_url);
+            } else {
+              history[req.body.user_id] = results;
+            }
+          }
+        })
+      } else { // User not authed
+        var response = {
+          response_type: "in_channel",
+          attachments: [
+            { fallback: results.search,
+              image_url: image,
+              title: '<' + image + '|' + results.search + '>'
+            }
+          ]
+        };
+
+        res.json(response);
+      }
     }
   } else {
     res.send("ERROR: No previous search found");
