@@ -99,7 +99,8 @@ app.post('/', function (req, res) {
                 if(body.error) {
                   post_text_to_url("ERROR: " + body.error, req.body.response_url);
                 } else {
-                  history[req.body['user_id']] = current_history;
+                  if (history[req.body.user_id] === undefined) history[req.body.user_id] = {};
+                  history[req.body['user_id']][req.body['channel_id']] = current_history;
                 }
               }
             })
@@ -115,7 +116,9 @@ app.post('/', function (req, res) {
             };
 
             res.json(response);
-            history[req.body['user_id']] = current_history;
+
+            if (history[req.body.user_id] === undefined) history[req.body.user_id] = {};
+            history[req.body['user_id']][req.body['channel_id']] = current_history;
             post_text_to_url('<https://slack.com/oauth/authorize?scope=chat:write:user,commands&redirect_uri=' + secrets.HOST_URL + '&team=' + req.body.team_id + '&state=' + req.body.user_id + '&client_id=' + secrets.APP_CLIENT_ID + '|Please authenticate to allow inline responses. Click here to auth.>', req.body.response_url);
           }
         } else {
@@ -151,7 +154,8 @@ app.get('/auth', function(req, res){
 });
 
 app.post('/rtd', function(req, res){
-  var results = history[req.body.user_id];
+  if (history[req.body.user_id] === undefined) history[req.body.user_id] = {};
+  var results = history[req.body.user_id][req.body.channel_id];
 
   if (results) {
     if (results.images.length == 0) {
@@ -186,7 +190,7 @@ app.post('/rtd', function(req, res){
             if(body.error) {
               post_text_to_url("ERROR: " + body.error, req.body.response_url);
             } else {
-              history[req.body.user_id] = results;
+              history[req.body.user_id][req.body.channel_id] = results;
             }
           }
         })
