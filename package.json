@@ -8,7 +8,8 @@
     "express": "^4.13.3",
     "multer": "1.0.5",
     "request": "*",
-    "forever": "*"
+    "forever": "*",
+    "pg": "*"
   },
   "devDependencies": {},
   "scripts": {
