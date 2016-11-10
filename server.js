@@ -4,6 +4,7 @@ var express = require('express'),
     multer = require('multer'),
     request = require('request'),
     fs = require('fs'),
+    cheerio = require('cheerio'),
     history = {};
 
 var pg = require('pg');
@@ -220,8 +221,92 @@ app.post('/rtd', function(req, res){
   }
 });
 
+app.post('/reference', function(req, res){
+  var original_search = req.body.text;
+  var pretty_player_name = to_title_case(original_search);
+  var search = original_search.toLowerCase().replace(/ /g , "+");
+  var url = null;
+  if (req.body.channel_name == "baseball") {
+    // url = "http://www.baseball-reference.com/player_search.cgi?search="+search;
+    url = null;
+  } else if (req.body.channel_name == "basketball") {
+    url = "http://www.basketball-reference.com/search/search.fcgi?search="+search;
+  } else {
+    res.send("ERROR: Command not supported in this channel (only #baseball, #basketball)")
+  }
+
+  if (url != null) {
+    request.get(url, function(error, response, body) {
+      if(error) {
+        res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+      } else {
+
+        //parse html page, pick out first link
+        var $ = cheerio.load(body);
+        var href = undefined;
+        if (req.body.channel_name == "baseball") {
+          if ($(".search_results a")[0] != undefined) {
+            href = $(".search_results a")[0]["href"];
+          }
+        } else if (req.body.channel_name == "basketball") {
+          if ($("#players a")['0'] != undefined) {
+            href = "http://www.basketball-reference.com"+$("#players a")['0']['attribs']['href'];
+          }
+        }
+
+        if (href == undefined) {
+          res.send("ERROR: No results");
+          console.log("FAILURE: req.body.channel_name: "+req.body.channel_name);
+        } else {
+          client.query('SELECT t.token FROM tokens t WHERE t.username LIKE $1', [req.body.user_id], function(err, result) {
+            var user_valid = result.rows[0] != undefined && result.rows.length > 0;
+
+            if(user_valid) {
+              var user_token = result.rows[0].token
+
+              res.send('');
+              var payload = {
+                token: user_token,
+                channel: req.body.channel_id,
+                as_user: true,
+                unfurl_links: true,
+                text: "/reference "+original_search+"\n"+href
+              }
+
+              request.post('https://slack.com/api/chat.postMessage', {form: payload}, function(error, response, body) {
+                if(error) {
+                  post_text_to_url("ERROR: Unexpected error ¯\\_(ツ)_/¯", req.body.response_url);
+                } else {
+                  var body = JSON.parse(body);
+
+                  if(body.error) {
+                    post_text_to_url("ERROR: " + body.error, req.body.response_url);
+                  }
+                }
+              });
+            } else { // User not authed
+              var response = {
+                response_type: "in_channel",
+                unfurl_links: true,
+                text: href
+              };
+
+              res.json(response);
+              post_text_to_url('<https://slack.com/oauth/authorize?scope=chat:write:user,commands&redirect_uri=' + process.env.HOST_URL + '&team=' + req.body.team_id + '&state=' + req.body.user_id + '&client_id=' + process.env.APP_CLIENT_ID + '|Please authenticate to allow inline responses. Click here to auth.>', req.body.response_url);
+            }
+          });
+        }
+      }
+    });
+  }
+});
+
 var post_text_to_url = function(message, url) {
   request.post(url, {json: {text: message}})
+}
+
+var to_title_case = function(str) {
+  return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
 }
 
 var server = app.listen(process.env.PORT, function () {

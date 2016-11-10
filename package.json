@@ -9,7 +9,8 @@
     "multer": "1.0.5",
     "request": "*",
     "forever": "*",
-    "pg": "*"
+    "pg": "*",
+    "cheerio": "*"
   },
   "devDependencies": {},
   "scripts": {
