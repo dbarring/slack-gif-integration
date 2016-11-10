@@ -227,8 +227,7 @@ app.post('/reference', function(req, res){
   var search = original_search.toLowerCase().replace(/ /g , "+");
   var url = null;
   if (req.body.channel_name == "baseball") {
-    // url = "http://www.baseball-reference.com/player_search.cgi?search="+search;
-    url = null;
+    url = "http://www.baseball-reference.com/player_search.cgi?search="+search;
   } else if (req.body.channel_name == "basketball") {
     url = "http://www.basketball-reference.com/search/search.fcgi?search="+search;
   } else {
@@ -245,8 +244,8 @@ app.post('/reference', function(req, res){
         var $ = cheerio.load(body);
         var href = undefined;
         if (req.body.channel_name == "baseball") {
-          if ($(".search_results a")[0] != undefined) {
-            href = $(".search_results a")[0]["href"];
+          if ($(".search_results a")["0"] != undefined) {
+            href = "http://www.baseball-reference.com"+$(".search_results a")["0"]["attribs"]["href"];
           }
         } else if (req.body.channel_name == "basketball") {
           if ($("#players a")['0'] != undefined) {
