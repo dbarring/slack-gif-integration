@@ -248,7 +248,9 @@ app.post('/reference', function(req, res){
             href = "http://www.baseball-reference.com"+$(".search_results a")["0"]["attribs"]["href"];
           }
         } else if (req.body.channel_name == "basketball") {
-          if ($("#players a")['0'] != undefined) {
+          if (response.request.uri.href.indexOf("search") == -1) {
+            href = response.request.uri.href;
+          } else if ($("#players a")['0'] != undefined) {
             href = "http://www.basketball-reference.com"+$("#players a")['0']['attribs']['href'];
           }
         }
@@ -300,6 +302,298 @@ app.post('/reference', function(req, res){
   }
 });
 
+app.post('/compare', function(req, res){
+  var original_search = req.body.text;
+
+  //Get player names
+
+  var words = original_search.split(' ');
+  var player_1 = undefined;
+  var player_2 = undefined;
+  var player_1_id = undefined;
+  var player_2_id = undefined;
+
+  var player_id_regex = /(?=\w+\.\w{3,4}$)\w+/g;
+
+  if (words.length == 2) {
+    player_1 = words[0];
+    player_2 = words[1];
+  } else if (words.length == 4) {
+    player_1 = words[0]+"+"+words[1];
+    player_2 = words[2]+"+"+words[3];
+  } else {
+    res.send("Can only compare two players");
+    return;
+  }
+
+  //Search for first player id
+  var url = null;
+  if (req.body.channel_name == "baseball") {
+    // url = "http://www.baseball-reference.com/player_search.cgi?search="+search;
+    res.send("ERROR: Command not supported in this channel (only #basketball)");
+    return;
+  } else if (req.body.channel_name == "basketball") {
+    url = "http://www.basketball-reference.com/search/search.fcgi?search="+player_1;
+  } else {
+    res.send("ERROR: Command not supported in this channel (only #basketball)");
+    return;
+  }
+
+  if (url != null) {
+    request.get(url, function(error, response, body) {
+      if(error) {
+        res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+        return;
+      } else {
+
+        //parse html page, pick out first link
+        var $ = cheerio.load(body);
+        if (req.body.channel_name == "baseball") {
+          // if ($(".search_results a")["0"] != undefined) {
+          //   var href  = $(".search_results a")["0"]["attribs"]["href"];
+          //   player_1_id = $(".search_results a")["0"]["attribs"]["href"];
+          // }
+        } else if (req.body.channel_name == "basketball") {
+          if (response.request.uri.href.indexOf("search") == -1) {
+            var href = response.request.uri.href;
+            var href_split = href.split("/");
+            player_1_id = href_split[href_split.length-1].replace(".html","");
+          }
+          else if ($("#players a")['0'] != undefined) {
+            var href = $("#players a")['0']['attribs']['href'];
+            var href_split = href.split("/");
+            player_1_id = href_split[href_split.length-1].replace(".html","");
+          }
+        }
+
+        if (player_1_id == undefined) {
+          res.send("ERROR: No results for player 1: "+player_1);
+          return;
+        } else {
+          //Search for second player id
+          url = null;
+          if (req.body.channel_name == "baseball") {
+            // url = "http://www.baseball-reference.com/player_search.cgi?search="+search;
+            res.send("ERROR: Command not supported in this channel (only #basketball)");
+            return;
+          } else if (req.body.channel_name == "basketball") {
+            url = "http://www.basketball-reference.com/search/search.fcgi?search="+player_2;
+          } else {
+            res.send("ERROR: Command not supported in this channel (only #basketball)");
+            return;
+          }
+
+          request.get(url, function(error, response, body) {
+            if(error) {
+              res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+              return;
+            } else {
+
+              //parse html page, pick out first link
+              var $ = cheerio.load(body);
+              if (req.body.channel_name == "baseball") {
+                // if ($(".search_results a")["0"] != undefined) {
+                //   var href  = $(".search_results a")["0"]["attribs"]["href"];
+                //   player_1_id = $(".search_results a")["0"]["attribs"]["href"];
+                // }
+              } else if (req.body.channel_name == "basketball") {
+                if (response.request.uri.href.indexOf("search") == -1) {
+                  var href = response.request.uri.href;
+                  var href_split = href.split("/");
+                  player_2_id = href_split[href_split.length-1].replace(".html","");
+                } else if ($("#players a")['0'] != undefined) {
+                  var href = $("#players a")['0']['attribs']['href'];
+                  var href_split = href.split("/");
+                  player_2_id = href_split[href_split.length-1].replace(".html","");
+                }
+              }
+
+              if (player_2_id == undefined) {
+                res.send("ERROR: No results for player 2: "+player_2);
+                return;
+              } else {
+                var final_url = null;
+                if (req.body.channel_name == "baseball") {
+                  // url = "http://www.baseball-reference.com/player_search.cgi?search="+search;
+                  res.send("ERROR: Command not supported in this channel (only #basketball)");
+                  return;
+                } else if (req.body.channel_name == "basketball") {
+                  final_url = "http://www.basketball-reference.com/play-index/pcm_finder.cgi?request=1&sum=0&player_id1="+player_1_id+"&y1=2017&player_id2="+player_2_id+"&y2=2017";
+                } else {
+                  res.send("ERROR: Command not supported in this channel (only #basketball)");
+                  return;
+                }
+
+                client.query('SELECT t.token FROM tokens t WHERE t.username LIKE $1', [req.body.user_id], function(err, result) {
+                  var user_valid = result.rows[0] != undefined && result.rows.length > 0;
+
+                  if(user_valid) {
+                    var user_token = result.rows[0].token
+
+                    res.send('');
+                    var payload = {
+                      token: user_token,
+                      channel: req.body.channel_id,
+                      as_user: true,
+                      unfurl_links: true,
+                      text: "/compare "+original_search+"\n"+final_url
+                    }
+
+                    request.post('https://slack.com/api/chat.postMessage', {form: payload}, function(error, response, body) {
+                      if(error) {
+                        post_text_to_url("ERROR: Unexpected error ¯\\_(ツ)_/¯", req.body.response_url);
+                      } else {
+                        var body = JSON.parse(body);
+
+                        if(body.error) {
+                          post_text_to_url("ERROR: " + body.error, req.body.response_url);
+                        }
+                      }
+                    });
+                  } else { // User not authed
+                    var response = {
+                      response_type: "in_channel",
+                      unfurl_links: true,
+                      text: final_url
+                    };
+
+                    res.json(response);
+                    post_text_to_url('<https://slack.com/oauth/authorize?scope=chat:write:user,commands&redirect_uri=' + process.env.HOST_URL + '&team=' + req.body.team_id + '&state=' + req.body.user_id + '&client_id=' + process.env.APP_CLIENT_ID + '|Please authenticate to allow inline responses. Click here to auth.>', req.body.response_url);
+                  }
+                });
+              }
+            }
+          });
+        }
+      }
+    });
+  }
+});
+
+app.post('/last_game', function(req, res){
+  var original_search = req.body.text;
+  var pretty_player_name = to_title_case(original_search);
+  var search = original_search.toLowerCase().replace(/ /g , "+");
+  var url = null;
+  if (req.body.channel_name == "baseball") {
+    // url = "http://www.baseball-reference.com/player_search.cgi?search="+search;
+    res.send("ERROR: Command not supported in this channel (only #basketball)");
+  } else if (req.body.channel_name == "basketball") {
+    url = "http://www.basketball-reference.com/search/search.fcgi?search="+search;
+  } else {
+    res.send("ERROR: Command not supported in this channel (only #baseball, #basketball)");
+  }
+
+  if (url != null) {
+    request.get(url, function(error, response, body) {
+      if(error) {
+        res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+      } else {
+
+        //parse html page, pick out first link
+        var $ = cheerio.load(body);
+        var href = undefined;
+        if (req.body.channel_name == "baseball") {
+          if ($(".search_results a")["0"] != undefined) {
+            href = "http://www.baseball-reference.com"+$(".search_results a")["0"]["attribs"]["href"];
+          }
+        } else if (req.body.channel_name == "basketball") {
+          if (response.request.uri.href.indexOf("search") == -1) {
+            href = response.request.uri.href;
+          } else if ($("#players a")['0'] != undefined) {
+            href = "http://www.basketball-reference.com"+$("#players a")['0']['attribs']['href'];
+          }
+        }
+
+        if (href == undefined) {
+          res.send("ERROR: No results");
+          console.log("FAILURE: req.body.channel_name: "+req.body.channel_name);
+        } else {
+          href = href.replace(".html", "/gamelog/2017");
+          request.get(href, function(error, response, body) {
+            if(error) {
+              res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+            } else {
+
+              //parse html, find last row in game log table, construct pretty statline
+              $ = cheerio.load(body);
+              $row = $("#pgl_basic tr").last();
+              $columns = $row.find("td");
+
+              var date = $($columns[1]).text();
+              var opponent = $($columns[5]).text();
+              var minutes = $($columns[8]).text();
+              var fg = $($columns[9]).text();
+              var fga = $($columns[10]).text();
+              var fgp = $($columns[11]).text();
+              var threes = $($columns[12]).text();
+              var threes_a = $($columns[13]).text();
+              var threes_p = $($columns[14]).text();
+              var ft = $($columns[15]).text();
+              var fta = $($columns[16]).text();
+              var ftp = $($columns[17]).text();
+              var reb = $($columns[20]).text();
+              var ast = $($columns[21]).text();
+              var stl = $($columns[22]).text();
+              var blk = $($columns[23]).text();
+              var tov = $($columns[24]).text();
+              var pts = $($columns[26]).text();
+
+              var message = "*"+pretty_player_name+"*'s most recent game:\n"+
+              ">>>*"+date+"* vs *"+opponent+"*\n"+
+              "*MIN*: "+minutes+"\n"+
+              "*PTS*: "+pts+" ("+fg+"/"+fga+", "+fgp+" *FG%*, "+threes+"/"+threes_a+" *3P*, "+ft+"/"+fta+" *FT*)\n"+
+              "*REB*: "+reb+"\n"+
+              "*AST*: "+ast+"\n"+
+              "*STL*: "+stl+"\n"+
+              "*BLK*: "+blk+"\n"+
+              "*TO*: "+tov;
+
+              client.query('SELECT t.token FROM tokens t WHERE t.username LIKE $1', [req.body.user_id], function(err, result) {
+                var user_valid = result.rows[0] != undefined && result.rows.length > 0;
+
+                if(user_valid) {
+                  var user_token = result.rows[0].token
+
+                  res.send('');
+                  var payload = {
+                    token: user_token,
+                    channel: req.body.channel_id,
+                    as_user: true,
+                    unfurl_links: true,
+                    text: "/log "+original_search+"\n"+message
+                  }
+
+                  request.post('https://slack.com/api/chat.postMessage', {form: payload}, function(error, response, body) {
+                    if(error) {
+                      post_text_to_url("ERROR: Unexpected error ¯\\_(ツ)_/¯", req.body.response_url);
+                    } else {
+                      var body = JSON.parse(body);
+
+                      if(body.error) {
+                        post_text_to_url("ERROR: " + body.error, req.body.response_url);
+                      }
+                    }
+                  });
+                } else { // User not authed
+                  var response = {
+                    response_type: "in_channel",
+                    unfurl_links: true,
+                    text: message
+                  };
+
+                  res.json(response);
+                  post_text_to_url('<https://slack.com/oauth/authorize?scope=chat:write:user,commands&redirect_uri=' + process.env.HOST_URL + '&team=' + req.body.team_id + '&state=' + req.body.user_id + '&client_id=' + process.env.APP_CLIENT_ID + '|Please authenticate to allow inline responses. Click here to auth.>', req.body.response_url);
+                }
+              });
+            }
+          });
+        }
+      }
+    });
+  }
+});
+
 var post_text_to_url = function(message, url) {
   request.post(url, {json: {text: message}})
 }
@@ -308,7 +602,7 @@ var to_title_case = function(str) {
   return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
 }
 
-var server = app.listen(process.env.PORT, function () {
+var server = app.listen(process.env.PORT || 3001, function () {
   var host = server.address().address;
   var port = server.address().port;
 });
