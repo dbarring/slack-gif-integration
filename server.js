@@ -92,8 +92,10 @@ app.post('/', function (req, res) {
                 } else {
                   var body = JSON.parse(body);
 
-                  current_history.ts = body.message.ts;
-                  current_history.channel = body.channel;
+                  if (body.message != undefined) {
+                    current_history.ts = body.message.ts;
+                    current_history.channel = body.channel;
+                  }
 
                   if(body.error) {
                     post_text_to_url("ERROR: " + body.error, req.body.response_url);
@@ -471,23 +473,25 @@ app.post('/compare', function(req, res){
 });
 
 app.post('/last_game', function(req, res){
+  res.send("");
+
   var original_search = req.body.text;
   var pretty_player_name = to_title_case(original_search);
   var search = original_search.toLowerCase().replace(/ /g , "+");
   var url = null;
   if (req.body.channel_name == "baseball") {
     // url = "http://www.baseball-reference.com/player_search.cgi?search="+search;
-    res.send("ERROR: Command not supported in this channel (only #basketball)");
+    request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: "ERROR: Command not supported in this channel (only #basketball)"}});
   } else if (req.body.channel_name == "basketball") {
     url = "http://www.basketball-reference.com/search/search.fcgi?search="+search;
   } else {
-    res.send("ERROR: Command not supported in this channel (only #baseball, #basketball)");
+    request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: "ERROR: Command not supported in this channel (only #basketball)"}});
   }
 
   if (url != null) {
     request.get(url, function(error, response, body) {
       if(error) {
-        res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+        request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: "ERROR: Unexpected error ¯\\_(ツ)_/¯"}});
       } else {
 
         //parse html page, pick out first link
@@ -506,13 +510,12 @@ app.post('/last_game', function(req, res){
         }
 
         if (href == undefined) {
-          res.send("ERROR: No results");
-          console.log("FAILURE: req.body.channel_name: "+req.body.channel_name);
+          request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: "No results for "+original_search}});
         } else {
           href = href.replace(".html", "/gamelog/2017");
           request.get(href, function(error, response, body) {
             if(error) {
-              res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+              request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: "ERROR: Unexpected error ¯\\_(ツ)_/¯"}});
             } else {
 
               //parse html, find last row in game log table, construct pretty statline
@@ -549,43 +552,7 @@ app.post('/last_game', function(req, res){
               "*BLK*: "+blk+"\n"+
               "*TO*: "+tov;
 
-              client.query('SELECT t.token FROM tokens t WHERE t.username LIKE $1', [req.body.user_id], function(err, result) {
-                var user_valid = result.rows[0] != undefined && result.rows.length > 0;
-
-                if(user_valid) {
-                  var user_token = result.rows[0].token
-
-                  res.send('');
-                  var payload = {
-                    token: user_token,
-                    channel: req.body.channel_id,
-                    as_user: true,
-                    unfurl_links: true,
-                    text: "/log "+original_search+"\n"+message
-                  }
-
-                  request.post('https://slack.com/api/chat.postMessage', {form: payload}, function(error, response, body) {
-                    if(error) {
-                      post_text_to_url("ERROR: Unexpected error ¯\\_(ツ)_/¯", req.body.response_url);
-                    } else {
-                      var body = JSON.parse(body);
-
-                      if(body.error) {
-                        post_text_to_url("ERROR: " + body.error, req.body.response_url);
-                      }
-                    }
-                  });
-                } else { // User not authed
-                  var response = {
-                    response_type: "in_channel",
-                    unfurl_links: true,
-                    text: message
-                  };
-
-                  res.json(response);
-                  post_text_to_url('<https://slack.com/oauth/authorize?scope=chat:write:user,commands&redirect_uri=' + process.env.HOST_URL + '&team=' + req.body.team_id + '&state=' + req.body.user_id + '&client_id=' + process.env.APP_CLIENT_ID + '|Please authenticate to allow inline responses. Click here to auth.>', req.body.response_url);
-                }
-              });
+              request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: message}});
             }
           });
         }
