@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+var request = require('request');
+var cheerio = require('cheerio');
+
+var date = new Date();
+
+// Yesterday
+date.setDate(date.getDate() - 1);
+
+var month = date.getMonth() + 1;
+var day = date.getDate();
+
+//play index search page
+var url = "http://www.basketball-reference.com/play-index/pgl_finder.cgi?request=1&match=game&year_min=2017&year_max=2017&age_min=0&age_max=99&game_month="+month+"&game_day="+day+"&pos_is_g=Y&pos_is_gf=Y&pos_is_f=Y&pos_is_fg=Y&pos_is_fc=Y&pos_is_c=Y&pos_is_cf=Y&order_by=game_score&order_by_asc=Y&c1stat=mp&c1comp=gt&c1val=20"
+
+request.get(url, function(error, response, body) {
+  if(error) {
+    res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+  } else {
+
+    //parse html, find first row in game log table, construct pretty statline
+    $ = cheerio.load(body);
+    $row = $("#stats tbody tr");
+    $columns = $row.find("td");
+
+    var name = $($columns[0]).text();
+    var date = $($columns[3]).text();
+    var opponent = $($columns[6]).text();
+    var minutes = $($columns[9]).text();
+    var fg = $($columns[10]).text();
+    var fga = $($columns[11]).text();
+    var fgp = $($columns[12]).text();
+    var threes = $($columns[16]).text();
+    var threes_a = $($columns[17]).text();
+    var threes_p = $($columns[18]).text();
+    var ft = $($columns[19]).text();
+    var fta = $($columns[20]).text();
+    var ftp = $($columns[21]).text();
+    var reb = $($columns[24]).text();
+    var ast = $($columns[25]).text();
+    var stl = $($columns[26]).text();
+    var blk = $($columns[27]).text();
+    var tov = $($columns[28]).text();
+    var pf = $($columns[29]).text();
+    var pts = $($columns[30]).text();
+
+    var message = "Lowlight of the day for *"+date+"*: *"+name+"* vs *"+opponent+"*\n"+
+    ">>>*MIN*: "+minutes+"\n"+
+    "*PTS*: "+pts+" ("+fg+"/"+fga+", "+fgp+" *FG%*, "+threes+"/"+threes_a+" *3P*, "+ft+"/"+fta+" *FT*)\n"+
+    "*REB*: "+reb+"\n"+
+    "*AST*: "+ast+"\n"+
+    "*STL*: "+stl+"\n"+
+    "*BLK*: "+blk+"\n"+
+    "*PF*: "+pf+"\n"+
+    "*TO*: "+tov;
+
+    request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: message}});
+  }
+});
