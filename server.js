@@ -561,6 +561,60 @@ app.post('/last_game', function(req, res){
   }
 });
 
+app.post('/blurb', function(req, res){
+  var original_search = req.body.text;
+  var pretty_player_name = to_title_case(original_search);
+  var search = original_search.toLowerCase().replace(/ /g , "+");
+  var url = null;
+  var first, last = null;
+
+
+  var words = original_search.split(' ');
+  if (words.length == 2) {
+    first = words[0];
+    last = words[1];
+  }
+
+
+  if (req.body.channel_name == "basketball") {
+    url = "http://www.rotoworld.com/content/playersearch.aspx?searchname="+last+",%20"+first+"&sport=nba"
+  } else {
+    res.send("ERROR: Command not supported in this channel (only #basketball)")
+  }
+
+  if (url != null) {
+    request.get(url, function(error, response, body) {
+      if(error) {
+        res.send("ERROR: Unexpected error ¯\\_(ツ)_/¯");
+      } else {
+
+        //parse html page, get blurb
+        var $ = cheerio.load(body);
+
+        var $current_news = $($(".playernews")[0]);
+        var blurb_header = $current_news.find(".report").text();
+        var blurb_body = $current_news.find(".impact").text();
+
+        debugger;
+
+        if ($current_news.length == 0) {
+          res.send("ERROR: No results");
+          console.log("FAILURE: req.body.channel_name: "+req.body.channel_name);
+        } else {
+          var response = {
+            response_type: "in_channel",
+            unfurl_links: true,
+            text: blurb_header+"\n"+
+                  "*Advice:* "+blurb_body
+          };
+
+          res.json(response);
+        }
+      }
+    });
+  }
+});
+
 var post_text_to_url = function(message, url) {
   request.post(url, {json: {text: message}})
 }
