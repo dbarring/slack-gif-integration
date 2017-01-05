@@ -595,20 +595,16 @@ app.post('/blurb', function(req, res){
         var blurb_header = $current_news.find(".report").text();
         var blurb_body = $current_news.find(".impact").text();
 
-        debugger;
-
         if ($current_news.length == 0) {
           res.send("ERROR: No results");
           console.log("FAILURE: req.body.channel_name: "+req.body.channel_name);
         } else {
-          var response = {
-            response_type: "in_channel",
-            unfurl_links: true,
-            text: blurb_header+"\n"+
-                  "*Advice:* "+blurb_body
-          };
+          res.send("");
 
-          res.json(response);
+          message = blurb_header+"\n\n"+
+                "*Advice:* "+blurb_body;
+
+          request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: message}});
         }
       }
     });
