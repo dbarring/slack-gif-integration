@@ -578,8 +578,10 @@ app.post('/blurb', function(req, res){
 
   if (req.body.channel_name == "basketball") {
     url = "http://www.rotoworld.com/content/playersearch.aspx?searchname="+last+",%20"+first+"&sport=nba"
+  } else if (req.body.channel_name == "baseball") {
+    url = "http://www.rotoworld.com/content/playersearch.aspx?searchname="+last+",%20"+first+"&sport=mlb"
   } else {
-    res.send("ERROR: Command not supported in this channel (only #basketball)")
+    res.send("ERROR: Command not supported in this channel (only #baseball, #basketball)")
   }
 
   if (url != null) {
@@ -604,7 +606,11 @@ app.post('/blurb', function(req, res){
           message = blurb_header+"\n\n"+
                 "*Advice:* "+blurb_body;
 
-          request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: message}});
+          if (req.body.channel_name == "basketball") {
+            request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: message}});
+          } else if (req.body.channel_name == "baseball") {
+            request.post(process.env.SLACK_BASEBALL_URL, {json: {text: message}});
+          }
         }
       }
     });
