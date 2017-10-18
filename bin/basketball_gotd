@@ -11,7 +11,7 @@ var month = date.getMonth() + 1;
 var day = date.getDate();
 
 //play index search page
-var url = "http://www.basketball-reference.com/play-index/pgl_finder.cgi?request=1&match=game&year_min=2017&year_max=2017&age_min=0&age_max=99&game_month="+month+"&game_day="+day+"&pos_is_g=Y&pos_is_gf=Y&pos_is_f=Y&pos_is_fg=Y&pos_is_fc=Y&pos_is_c=Y&pos_is_cf=Y&order_by=game_score"
+var url = "http://www.basketball-reference.com/play-index/pgl_finder.cgi?request=1&match=game&year_min=2018&year_max=2018&age_min=0&age_max=99&game_month="+month+"&game_day="+day+"&pos_is_g=Y&pos_is_gf=Y&pos_is_f=Y&pos_is_fg=Y&pos_is_fc=Y&pos_is_c=Y&pos_is_cf=Y&order_by=game_score"
 
 request.get(url, function(error, response, body) {
   if(error) {
