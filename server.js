@@ -540,6 +540,7 @@ app.post('/last_game', function(req, res){
               var stl = $($columns[22]).text();
               var blk = $($columns[23]).text();
               var tov = $($columns[24]).text();
+              var pf = $($columns[25]).text();
               var pts = $($columns[26]).text();
 
               var message = "*"+pretty_player_name+"*'s most recent game:\n"+
@@ -550,6 +551,7 @@ app.post('/last_game', function(req, res){
               "*AST*: "+ast+"\n"+
               "*STL*: "+stl+"\n"+
               "*BLK*: "+blk+"\n"+
+              "*PF*: "+pf+"\n"+
               "*TO*: "+tov;
 
               request.post(process.env.SLACK_BASKETBALL_URL, {json: {text: message}});
